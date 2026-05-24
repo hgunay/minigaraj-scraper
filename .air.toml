@@ -1,0 +1,19 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "./tmp/scraper"
+  cmd = "go build -o ./tmp/scraper ./cmd/scraper"
+  delay = 1000
+  exclude_dir = ["tmp", "bin", "vendor", ".git", ".claude", "migrations"]
+  exclude_regex = ["_test.go"]
+  include_ext = ["go"]
+  kill_delay = "0s"
+  send_interrupt = true
+  stop_on_error = true
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = true
