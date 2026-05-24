@@ -1,0 +1,39 @@
+# ============================================================================
+# MiniGaraj Scraper - Docker Compose (production override)
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Author: Hakan Gunay
+# Date: 2026-04-04
+# ============================================================================
+
+services:
+
+  scraper-db:
+    environment:
+      POSTGRES_PASSWORD: ${SCRAPER_DB_PASSWORD:?Set SCRAPER_DB_PASSWORD}
+    volumes:
+      - scraper_pgdata_prod:/var/lib/postgresql/data
+    ports: []  # no host port in production
+
+  scraper:
+    restart: always
+    ports:
+      - "127.0.0.1:8300:8300"  # localhost only — reverse proxy handles external
+    environment:
+      SCRAPER_APP_ENV: production
+      SCRAPER_APP_API_KEY: ${SCRAPER_APP_API_KEY:?Set SCRAPER_APP_API_KEY}
+      SCRAPER_DB_PASSWORD: ${SCRAPER_DB_PASSWORD:?Set SCRAPER_DB_PASSWORD}
+      SCRAPER_DB_SSLMODE: disable
+      SCRAPER_CRAWLER_PARALLELISM: 2
+      SCRAPER_CRAWLER_REQUEST_DELAY_MS: 2000
+      SCRAPER_CRAWLER_RANDOM_DELAY_MS: 1000
+      SCRAPER_LOG_LEVEL: info
+      SCRAPER_LOG_FORMAT: json
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+volumes:
+  scraper_pgdata_prod:

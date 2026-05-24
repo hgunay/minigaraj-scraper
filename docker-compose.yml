@@ -1,0 +1,73 @@
+# ============================================================================
+# MiniGaraj Scraper - Docker Compose (local dev)
+# Runs the scraper service + its dedicated PostgreSQL database
+#
+# Author: Hakan Gunay
+# Date: 2026-04-04
+# ============================================================================
+
+services:
+
+  # ── Scraper PostgreSQL (separate from minigaraj-api DB) ──────────────────
+  scraper-db:
+    image: postgres:16-alpine
+    container_name: minigaraj-scraper-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: minigaraj_scraper
+      APP_USER: scraper
+      APP_PASSWORD: scraper
+    ports:
+      - "5433:5432"
+    volumes:
+      - scraper_pgdata:/var/lib/postgresql/data
+      - ./scripts/docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d minigaraj_scraper"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Scraper Service ───────────────────────────────────────────────────────
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: minigaraj-scraper
+    restart: unless-stopped
+    depends_on:
+      scraper-db:
+        condition: service_healthy
+    ports:
+      - "8300:8300"
+    environment:
+      # App
+      SCRAPER_APP_ENV: development
+      SCRAPER_APP_PORT: 8300
+      SCRAPER_APP_API_KEY: ""
+      # Database — app user
+      SCRAPER_DB_HOST: scraper-db
+      SCRAPER_DB_PORT: 5432
+      SCRAPER_DB_USER: scraper
+      SCRAPER_DB_PASSWORD: scraper
+      SCRAPER_DB_NAME: minigaraj_scraper
+      SCRAPER_DB_SSLMODE: disable
+      # Database — admin user (for auto-create DB + migrations)
+      SCRAPER_DB_INIT_USER: postgres
+      SCRAPER_DB_INIT_USER_PASSWORD: postgres
+      # Crawler
+      SCRAPER_CRAWLER_PARALLELISM: 4
+      SCRAPER_CRAWLER_REQUEST_DELAY_MS: 1000
+      SCRAPER_CRAWLER_RANDOM_DELAY_MS: 500
+      SCRAPER_CRAWLER_MAX_DEPTH: 5
+      SCRAPER_CRAWLER_TIMEOUT_SEC: 30
+      SCRAPER_CRAWLER_MAX_RETRIES: 3
+      # Logging
+      SCRAPER_LOG_LEVEL: info
+      SCRAPER_LOG_FORMAT: console
+
+# ── Volumes ─────────────────────────────────────────────────────────────────
+volumes:
+  scraper_pgdata:
